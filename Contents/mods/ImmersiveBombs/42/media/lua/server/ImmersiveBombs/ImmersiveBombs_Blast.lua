@@ -6,16 +6,15 @@ if isClient() then return end
 
 ImmersiveBombs = ImmersiveBombs or {}
 
-local function cfg()
-    return ImmersiveBombs.Config
-end
+local S = nil
 
+-- TODO: Modding guide specified we should never print. Look for specified page
 local function log(msg)
-    if cfg().debug then print("[ImmersiveBombs] " .. tostring(msg)) end
+    if S.debug then print("[ImmersiveBombs] " .. tostring(msg)) end
 end
 
 local function materialResistance(obj)
-    local resist = cfg().resistance
+    local resist = S.resistance
     local sprite = obj:getSprite()
     if sprite then
         local props = sprite:getProperties()
@@ -41,20 +40,22 @@ end
 
 --- Brings a registered fence down, leaving broken sprites, debris and scrap.
 --- `force` ignores the energy threshold. Returns true if the object was consumed.
+--- TODO: Try to find a native function to replace this
 local function breakFence(obj, energy, originX, originY, force)
-    local C = cfg()
+    if not S.fences then return false end
+
     local broken = BrokenFences.getInstance()
     local bent = BentFences and BentFences.getInstance() or nil
 
     local isBreakable = broken:isBreakableObject(obj)
     local isBendable = bent ~= nil and bent:isBendableFence(obj)
     if not (isBreakable or isBendable) then return false end
-    if not force and energy < C.binary.fenceBreakThreshold then return false end
+    if not force and energy < S.binary.fenceBreakThreshold then return false end
 
     local dir = breakDirection(obj, originX, originY)
 
     if isBendable then
-        if force or bent:isBentObject(obj) or energy >= C.binary.fenceSmashThreshold then
+        if force or bent:isBentObject(obj) or energy >= S.binary.fenceSmashThreshold then
             bent:smashFence(obj, dir)
         else
             bent:bendFence(obj, dir)
@@ -65,24 +66,26 @@ local function breakFence(obj, energy, originX, originY, force)
     -- destroyFence may replace obj and drop it from the square.
     local square = obj:getSquare()
     broken:destroyFence(obj, dir)
-    if square ~= nil then
+    if S.leaveScrap and square ~= nil then
         broken:addItems(obj, square)
     end
     return true
 end
 
---- Scrap left by broken furniture. Mirrors IsoObject.addItemsFromProperties,
---- which is protected and so unreachable from Lua. Keyed on the same
---- Material/Material2/Material3 sprite properties the engine reads, so modded
---- furniture that declares them drops the right parts.
+--- Scrap left by broken furniture. Keyed on the same Material/Material2/
+--- Material3 sprite properties IsoObject.addItemsFromProperties() reads.
+--- 
+--- Deliberately made stingier with no secured drops.
+--- We are blowing shit up so we can't expect to have a lot of usable
+--- materials afterwards.
 local SCRAP = {
-    Wood        = { item = "Base.UnusableWood", oneIn = 1 },
-    MetalBars   = { item = "Base.MetalBar",     oneIn = 2 },
-    MetalPlates = { item = "Base.SheetMetal",   oneIn = 2 },
-    MetalPipe   = { item = "Base.MetalPipe",    oneIn = 2 },
-    MetalWire   = { item = "Base.Wire",         oneIn = 3 },
-    Nails       = { item = "Base.Nails",        oneIn = 2 },
-    Screws      = { item = "Base.Screws",       oneIn = 2 },
+    Wood        = { item = "Base.UnusableWood", oneIn = 3 },
+    MetalBars   = { item = "Base.MetalBar",     oneIn = 4 },
+    MetalPlates = { item = "Base.SheetMetal",   oneIn = 4 },
+    MetalPipe   = { item = "Base.MetalPipe",    oneIn = 4 },
+    MetalWire   = { item = "Base.Wire",         oneIn = 6 },
+    Nails       = { item = "Base.Nails",        oneIn = 4 },
+    Screws      = { item = "Base.Screws",       oneIn = 5 },
 }
 
 local function dropScrap(props, square)
@@ -95,24 +98,19 @@ local function dropScrap(props, square)
     end
 end
 
---- Furniture. The engine gives it no health field at all - a dresser is a bare
---- IsoObject whose only durability is IsoObject.damage, the same 0-100 short
---- that AttackObject decrements by 10 a swing and HitByVehicle drives. So we
---- spend blast energy against a toughness derived from PickUpWeight, the
---- vanilla per-tile weight used for carrying furniture around.
----
---- The gate is IsMoveAble / CanScrap: only furniture that could be dismantled
---- or carried is breakable, which is also the scope rule for this mod.
---- HitByCar does not cover furniture - it flags map props like signs and posts.
+--- Furniture. The engine gives it no health field at all.
+--- Damage field exists but its innadecuate
+--- 
+--- For now toughness is derived from the PickUpWeight
 local function damageFurniture(obj, energy, props, square)
-    local C = cfg()
+    if not S.furniture then return false end
     if not (props:has("IsMoveAble") or props:has("CanScrap")) then return false end
 
-    local weight = tonumber(props:get("PickUpWeight")) or C.furniture.defaultWeight
-    local health = weight * C.furniture.healthPerWeight
-    if energy * C.damageScale * materialResistance(obj) < health then return false end
+    local weight = tonumber(props:get("PickUpWeight")) or S.furnitureConf.defaultWeight
+    local health = weight * S.healthPerWeight
+    if energy * S.damageScale * materialResistance(obj) < health then return false end
 
-    dropScrap(props, square)
+    if S.leaveScrap then dropScrap(props, square) end
     square:transmitRemoveItemFromSquare(obj)
     return true
 end
@@ -121,7 +119,6 @@ end
 local function damageBinaryObject(obj, energy, originX, originY)
     if breakFence(obj, energy, originX, originY, false) then return end
 
-    local C = cfg()
     local props = obj:getProperties()
     if props == nil then return end
 
@@ -131,29 +128,44 @@ local function damageBinaryObject(obj, energy, originX, originY)
     if damageFurniture(obj, energy, props, square) then return end
 
     -- Map props - signs, posts, light fixtures - flagged destructible by impact.
+    if not S.props then return end
     if not props:has("HitByCar") then return end
 
-    local newDamage = obj:getDamage() - (energy * C.binary.genericDamageScale)
-    if newDamage <= 0 then
+    local loss = energy * S.binary.genericDamageScale
+    if obj:getDamage() - loss <= 0 then
         square:transmitRemoveItemFromSquare(obj)
         return
     end
-    obj:setDamage(math.floor(newDamage))
+    if loss >= 1 then obj:Damage(loss * 10) end
+end
+
+--- Do not remove floors
+local function isFloor(obj)
+    local props = obj:getProperties()
+    return props ~= nil and props:has(IsoFlagType.solidfloor)
+end
+
+local function thumpableAllowed(obj)
+    if obj:isDoor() then return S.doors end
+    if obj:isWindow() then return S.windows end
+    return S.playerBuilt
 end
 
 local function resolveObject(obj, energy, originX, originY)
     if obj == nil then return end
+    if isFloor(obj) then return end
 
-    local damage = energy * cfg().damageScale * materialResistance(obj)
+    local damage = energy * S.damageScale * materialResistance(obj)
 
     -- Smashes itself and trips the alarm at zero health.
     if instanceof(obj, "IsoWindow") then
-        obj:Damage(damage)
+        if S.windows then obj:Damage(damage) end
         return
     end
 
     -- IsoDoor has no Damage(float).
     if instanceof(obj, "IsoDoor") then
+        if not S.doors then return end
         if obj:getHealth() <= 0 then return end
         obj:setHealth(math.max(0, math.floor(obj:getHealth() - damage)))
         if obj:getHealth() <= 0 then
@@ -163,6 +175,7 @@ local function resolveObject(obj, energy, originX, originY)
     end
 
     if instanceof(obj, "IsoThumpable") then
+        if not thumpableAllowed(obj) then return end
         if obj:getHealth() <= 0 then return end
         obj:Damage(damage)
         -- Damage does not destroy on its own.
@@ -179,6 +192,7 @@ end
 
 local function applyToSquare(square, energy, originX, originY)
     if square == nil then return end
+    -- Respect No destruction zones
     if NonPvpZone.getNonPvpZone(square:getX(), square:getY()) ~= nil then
         return
     end
@@ -196,14 +210,16 @@ local function applyToSquare(square, energy, originX, originY)
 
     -- Burn() chars eligible walls and strips doors, windows and curtains.
     -- It skips sprites the engine considers fire-immune, such as concrete.
-    if cfg().char.enabled and energy >= cfg().char.energyThreshold then
+    -- TODO: Might be a better idea to use the staining/dirtying mechanic when
+    -- destroying walls is toggled off
+    if S.charWalls and energy >= S.charThreshold then
         square:Burn()
     end
 end
 
 local function onThrowableExplode(trap, square)
-    local C = cfg()
-    if not C or not C.enabled then return end
+    S = ImmersiveBombs.getSettings()
+    if not S.enabled then return end
     if trap == nil or square == nil then return end
 
     local power = trap:getExplosionPower()
@@ -212,28 +228,35 @@ local function onThrowableExplode(trap, square)
 
     if power > 0 and range > 0 then
         -- Yield is power * range: a wider charge is a bigger charge.
-        baseEnergy = (power * range / C.referenceYield) ^ C.yieldExponent
+        baseEnergy = (power * range / S.referenceYield) ^ S.yieldExponent
     else
         if trap:getFireStartingEnergy() <= 0 then return end
-        baseEnergy = C.fireFallback.energy
-        range = C.fireFallback.range
+        baseEnergy = S.fireFallback.energy
+        range = S.fireFallback.range
     end
+
+    baseEnergy = baseEnergy * S.powerScale
+
+    -- Blast reach stretches the shockwave without touching the yield above,
+    -- so widening the radius does not also make the charge stronger.
+    local reach = range * S.reachScale
+    if reach <= 0 then return end
 
     local cell = square:getCell()
     local ox, oy, oz = square:getX(), square:getY(), square:getZ()
-    local r = math.floor(range)
+    local r = math.floor(reach)
 
-    log(string.format("blast at %d,%d,%d power=%d range=%d energy=%.4f",
-        ox, oy, oz, power, range, baseEnergy))
+    log(string.format("blast at %d,%d,%d power=%d range=%d reach=%.2f energy=%.4f",
+        ox, oy, oz, power, range, reach, baseEnergy))
 
     for x = ox - r, ox + r do
         for y = oy - r, oy + r do
             local dx, dy = x - ox, y - oy
             local dist = math.sqrt(dx * dx + dy * dy)
-            if dist <= range then
-                local falloff = (1 - dist / range) ^ C.falloffExponent
+            if dist <= reach then
+                local falloff = (1 - dist / reach) ^ S.falloffExponent
                 local energy = baseEnergy * falloff
-                if energy >= C.minEnergy then
+                if energy >= S.minEnergy then
                     applyToSquare(cell:getGridSquare(x, y, oz), energy, ox, oy)
                 end
             end

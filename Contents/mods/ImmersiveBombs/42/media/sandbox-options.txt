@@ -1,0 +1,166 @@
+/*
+    Sandbox options for ImmersiveBombs.
+
+    These are gameplay settings - they mutate the world and resolve server-side -
+    so they live here rather than in PZAPI.ModOptions, which is client-local and
+    would desync in multiplayer. They appear as their own "Immersive Bombs" page
+    in the Sandbox Options screen, in the server settings editor, and in the
+    in-game admin/debug sandbox editor.
+
+    Parsing traps (CustomSandboxOptions.readFile / ScriptParser):
+      - readFile concatenates lines with NO separator, so every entry must be
+        terminated by its own comma, including the last one before a closing brace.
+      - stripComments only understands block comments. A // comment would swallow
+        the rest of the file, because the newline that should end it is gone.
+
+    Reached from Lua as SandboxVars.ImmersiveBombs.<name>, or - always current,
+    even after a mid-game admin edit - getSandboxOptions():getOptionByName().
+*/
+
+VERSION = 1,
+
+/* ---- Master switch ---- */
+
+option ImmersiveBombs.Enabled
+{
+    type = boolean,
+    default = true,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_Enabled,
+}
+
+/* ---- What a blast is allowed to break ---- */
+
+option ImmersiveBombs.Doors
+{
+    type = boolean,
+    default = true,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_Doors,
+}
+
+option ImmersiveBombs.Windows
+{
+    type = boolean,
+    default = true,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_Windows,
+}
+
+option ImmersiveBombs.Fences
+{
+    type = boolean,
+    default = true,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_Fences,
+}
+
+option ImmersiveBombs.PlayerBuilt
+{
+    type = boolean,
+    default = true,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_PlayerBuilt,
+}
+
+option ImmersiveBombs.Furniture
+{
+    type = boolean,
+    default = false,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_Furniture,
+}
+
+option ImmersiveBombs.Props
+{
+    type = boolean,
+    default = true,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_Props,
+}
+
+option ImmersiveBombs.CharWalls
+{
+    type = boolean,
+    default = false,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_CharWalls,
+}
+
+option ImmersiveBombs.ScorchMarks
+{
+    type = boolean,
+    default = true,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_ScorchMarks,
+}
+
+option ImmersiveBombs.LeaveScrap
+{
+    type = boolean,
+    default = true,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_LeaveScrap,
+}
+
+/* ---- Calibration ---- */
+
+option ImmersiveBombs.BlastPower
+{
+    type = integer,
+    default = 100,
+    min = 0,
+    max = 1000,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_BlastPower,
+}
+
+option ImmersiveBombs.BlastRadius
+{
+    type = integer,
+    default = 100,
+    min = 25,
+    max = 300,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_BlastRadius,
+}
+
+option ImmersiveBombs.Falloff
+{
+    type = double,
+    default = 4.0,
+    min = 0.5,
+    max = 12.0,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_Falloff,
+}
+
+option ImmersiveBombs.FurnitureToughness
+{
+    type = double,
+    default = 6.0,
+    min = 0.5,
+    max = 50.0,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_FurnitureToughness,
+}
+
+option ImmersiveBombs.CharThreshold
+{
+    type = double,
+    default = 0.53,
+    min = 0.0,
+    max = 5.0,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_CharThreshold,
+}
+
+/* ---- Diagnostics ---- */
+
+option ImmersiveBombs.Debug
+{
+    type = boolean,
+    default = false,
+    page = ImmersiveBombs,
+    translation = ImmersiveBombs_Debug,
+}

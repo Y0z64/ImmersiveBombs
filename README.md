@@ -1,6 +1,6 @@
 ## This is a Project Zomboid Mod Template
-### This template is staged for a hybrid B41/B42 setup
-In other words, you are working on a mod for both versions of the game.<br>
+### Build 42 only
+The mod targets B42 onwards; the B41 tree has been removed.<br>
 See: https://pzwiki.net/wiki/Mod_structure for more info.
 <br><br>
 ### Note on Non-standard [images](images/) folder.
