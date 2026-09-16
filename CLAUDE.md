@@ -110,23 +110,29 @@ Sandbox-options traps:
   (`ISServerSandboxOptionsUI.lua:739`), so the `SandboxVars` table goes stale on a mid-game edit.
 - `Translator.getText` runs `String.formatted` on the result, so a literal `%` in an option
   name throws (caught, but logged). Avoid it.
+- **`Sandbox.json` must be strict JSON** — no `//` comments, no trailing comma. `tryFillMapFromFile`
+  parses with `withStrictMode(Core.IS_DEV)`, so a lenient file loads in a normal game and then
+  throws `RuntimeException("JSON Error in: …")` the moment anyone runs with `-debug`.
 
 ## Current state
 
-- `media/sandbox-options.txt` — 16 player-facing options
+- `media/sandbox-options.txt` — 13 player-facing options
 - `media/lua/shared/Translate/EN/Sandbox.json` — their names and tooltips
 - `media/lua/shared/ImmersiveBombs/ImmersiveBombs_Config.lua` — curve shape, calibration notes,
   and `ImmersiveBombs.getSettings()`, which folds the sandbox choices in once per blast
 - `media/lua/server/ImmersiveBombs/ImmersiveBombs_Blast.lua` — `OnThrowableExplode` handler
 
-Defaults: doors, windows, fences, player-built structures and street props **on**; furniture
+Defaults: doors, windows, player-built structures and fences/street props **on**; furniture
 and wall charring **off**. `BlastPower` scales the blast's *energy*, not `damageScale`, because
 fences, props and charring are decided by comparing energy against a threshold and would
 otherwise ignore it.
 
+Fences and street props share one option, `FencesAndProps`: both are the map clutter vanilla
+already lets a car flatten, via `BrokenFences`/`BentFences` and the `HitByCar` flag.
+
 Done: durability damage + breaking doors, windows, fences, player-built structures;
 charring eligible walls via `IsoGridSquare.Burn()`; sandbox options for all of it.
-Not started: scorch stains/overlays (the `ScorchMarks` option is reserved and currently inert),
-container contents damage.
+Not started: scorch stains/overlays — always-on when they land, deliberately not a toggle —
+and container contents damage.
 
 Not yet play-tested; calibration is derived from engine health values.

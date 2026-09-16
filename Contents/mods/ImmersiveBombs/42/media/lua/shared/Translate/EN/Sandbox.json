@@ -2,37 +2,31 @@
     "Sandbox_ImmersiveBombs": "Immersive Bombs",
 
     "Sandbox_ImmersiveBombs_Enabled": "Damage the environment",
-    "Sandbox_ImmersiveBombs_Enabled_tooltip": "Master switch. When off, explosions behave exactly as they do in vanilla and hurt only characters.",
+    "Sandbox_ImmersiveBombs_Enabled_tooltip": "When off, explosions behave exactly as they do in vanilla and hurt only characters.",
 
     "Sandbox_ImmersiveBombs_Doors": "Break doors",
-    "Sandbox_ImmersiveBombs_Doors_tooltip": "Blasts damage doors and knock them off their hinges. \\nDoor toughness is the engine's own: a fence gate goes down easily, a locked security door needs a pipe bomb at point-blank range.",
+    "Sandbox_ImmersiveBombs_Doors_tooltip": "Blasts damage doors. \\n A fence gate goes down easily, a locked security door needs a pipe bomb at point-blank range.",
 
     "Sandbox_ImmersiveBombs_Windows": "Break windows",
-    "Sandbox_ImmersiveBombs_Windows_tooltip": "Blasts shatter windows. \\nGlass gives way well beyond the range at which anything structural breaks, and a broken window still trips the house alarm.",
-
-    "Sandbox_ImmersiveBombs_Fences": "Break fences",
-    "Sandbox_ImmersiveBombs_Fences_tooltip": "Blasts bend and flatten fences, leaving the same broken sprites and debris as a car crash. \\nWeak fences are blown away from the charge; a close hit smashes them outright.",
+    "Sandbox_ImmersiveBombs_Windows_tooltip": "Blasts shatter windows. Range is larger than breaking furniture or doors",
 
     "Sandbox_ImmersiveBombs_PlayerBuilt": "Break player-built structures",
     "Sandbox_ImmersiveBombs_PlayerBuilt_tooltip": "Blasts damage carpentry and metalwork raised by players - walls, gates, barricades. \\nTurn this off on a server where charges could be used to breach bases.",
 
     "Sandbox_ImmersiveBombs_Furniture": "Destroy furniture",
-    "Sandbox_ImmersiveBombs_Furniture_tooltip": "Blasts blow apart furniture that could have been dismantled or carried away, leaving its materials as scrap. \\nOnly loose furnishings are affected - never floors, and never load-bearing map walls.",
+    "Sandbox_ImmersiveBombs_Furniture_tooltip": "Blasts blow apart furniture that could have been dismantled or carried away, drops scrap.",
 
-    "Sandbox_ImmersiveBombs_Props": "Wreck street props",
-    "Sandbox_ImmersiveBombs_Props_tooltip": "Blasts damage the roadside clutter cars can already flatten - signs, posts, meters, light fixtures.",
+    "Sandbox_ImmersiveBombs_FencesAndProps": "Break fences and street props",
+    "Sandbox_ImmersiveBombs_FencesAndProps_tooltip": "Blasts bend and flatten fences, and wreck the roadside clutter cars can already flatten - signs, posts, meters, light fixtures. \\nWeak fences are blown away from the charge; a close hit smashes them outright.",
 
-    "Sandbox_ImmersiveBombs_CharWalls": "Char walls through",
-    "Sandbox_ImmersiveBombs_CharWalls_tooltip": "A big enough blast burns eligible walls down to their charred versions, which can be climbed through like a window. \\nTimber chars, concrete does not. This is one-way, and it also strips the doors, windows and curtains off the tile, so it is off by default.",
+    "Sandbox_ImmersiveBombs_BreakWalls": "Break walls",
+    "Sandbox_ImmersiveBombs_BreakWalls_tooltip": "A big enough blast turns eligible walls into burned versions, which can be climbed through. \\nRequires at least a pipe bomb.",
 
-    "Sandbox_ImmersiveBombs_ScorchMarks": "Leave scorch marks",
-    "Sandbox_ImmersiveBombs_ScorchMarks_tooltip": "Stain nearby walls and floors with soot where the charge went off. \\nCosmetic only. Reserved - scorch marks are not drawn yet, so this setting currently does nothing.",
-
-    "Sandbox_ImmersiveBombs_LeaveScrap": "Leave scrap behind",
-    "Sandbox_ImmersiveBombs_LeaveScrap_tooltip": "Wrecked furniture and fences drop the planks, nails and metal they were made of. \\nTurn this off if you would rather explosives destroyed materials than produced them.",
+    "Sandbox_ImmersiveBombs_DropScrap": "Drop Scrap",
+    "Sandbox_ImmersiveBombs_DropScrap_tooltip": "Wrecked furniture and fences drop the planks, nails and metal they were made of. \\nTurn this off so destroyed objects drop nothing.",
 
     "Sandbox_ImmersiveBombs_BlastPower": "Blast power",
-    "Sandbox_ImmersiveBombs_BlastPower_tooltip": "Scales all structural damage, as a percentage. \\n100 is the calibrated default, where a pipe bomb breaks a locked security door on the tile it lands on. 0 leaves everything standing.",
+    "Sandbox_ImmersiveBombs_BlastPower_tooltip": "Scales all structural damage, as a percentage. \\nDefault is 100 at which pipe bombs destroy security doors point blank, at 0 nothing is destroyed",
 
     "Sandbox_ImmersiveBombs_BlastRadius": "Blast reach",
     "Sandbox_ImmersiveBombs_BlastRadius_tooltip": "Scales how far the damage carries, as a percentage of the explosive's own range. \\nThis stretches the shockwave without making the charge itself any stronger.",
@@ -41,11 +35,8 @@
     "Sandbox_ImmersiveBombs_Falloff_tooltip": "How sharply damage drops off with distance. \\nHigher concentrates the destruction on the tiles nearest the charge; lower spreads it evenly across the whole radius. Default 4.0.",
 
     "Sandbox_ImmersiveBombs_FurnitureToughness": "Furniture toughness",
-    "Sandbox_ImmersiveBombs_FurnitureToughness_tooltip": "How much punishment furniture takes for each point of its carrying weight, so a wardrobe always resists far more than a chair. \\nHigher means sturdier. Default 6.0.",
+    "Sandbox_ImmersiveBombs_FurnitureToughness_tooltip": "How much furniture is damaged for each point of its carrying weight, so a wardrobe always resists far more than a chair. \\nHigher means sturdier. Default 6.0.",
 
     "Sandbox_ImmersiveBombs_CharThreshold": "Charring threshold",
-    "Sandbox_ImmersiveBombs_CharThreshold_tooltip": "How much blast energy a tile must take before its walls char through. \\nLower makes charring common, higher confines it to the heart of a large explosion. Default 0.53, which is the energy that breaks a locked security door.",
-
-    "Sandbox_ImmersiveBombs_Debug": "Log blasts to console",
-    "Sandbox_ImmersiveBombs_Debug_tooltip": "Print the position, power and computed energy of every explosion to the console. \\nFor tuning and bug reports."
+    "Sandbox_ImmersiveBombs_CharThreshold_tooltip": "How much blast energy a tile must take before its walls break through. \\nLower makes charring common, higher confines it to the center of the explosion. Default 0.53, which is the energy that breaks a security door."
 }

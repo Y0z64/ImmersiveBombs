@@ -88,19 +88,16 @@ local Defaults = {
     Enabled            = true,
     Doors              = true,
     Windows            = true,
-    Fences             = true,
     PlayerBuilt        = true,
     Furniture          = false,
-    Props              = true,
-    CharWalls          = false,
-    ScorchMarks        = true,
-    LeaveScrap         = true,
+    FencesAndProps     = true,
+    BreakWalls         = false,
+    DropScrap          = true,
     BlastPower         = 100,
     BlastRadius        = 100,
     Falloff            = 4.0,
     FurnitureToughness = 6.0,
     CharThreshold      = 0.53,
-    Debug              = false,
 }
 
 --- Read straight from the SandboxOptions object rather than from SandboxVars.
@@ -126,17 +123,17 @@ end
 function ImmersiveBombs.getSettings()
     return {
         enabled     = sandboxValue("Enabled"),
-        debug       = sandboxValue("Debug"),
 
         doors       = sandboxValue("Doors"),
         windows     = sandboxValue("Windows"),
-        fences      = sandboxValue("Fences"),
         playerBuilt = sandboxValue("PlayerBuilt"),
         furniture   = sandboxValue("Furniture"),
-        props       = sandboxValue("Props"),
-        charWalls   = sandboxValue("CharWalls"),
-        scorchMarks = sandboxValue("ScorchMarks"),
-        leaveScrap  = sandboxValue("LeaveScrap"),
+        -- One switch for both: fences and street props are the map clutter
+        -- vanilla already lets a car flatten, reached through BrokenFences /
+        -- BentFences and the HitByCar sprite flag respectively.
+        fencesAndProps = sandboxValue("FencesAndProps"),
+        BreakWalls   = sandboxValue("BreakWalls"),
+        dropScrap   = sandboxValue("DropScrap"),
 
         -- Blast power multiplies the blast's energy rather than damageScale,
         -- so it reaches every consequence uniformly. Half the destruction here

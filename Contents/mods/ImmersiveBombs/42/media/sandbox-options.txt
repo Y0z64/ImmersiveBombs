@@ -47,14 +47,6 @@ option ImmersiveBombs.Windows
     translation = ImmersiveBombs_Windows,
 }
 
-option ImmersiveBombs.Fences
-{
-    type = boolean,
-    default = true,
-    page = ImmersiveBombs,
-    translation = ImmersiveBombs_Fences,
-}
-
 option ImmersiveBombs.PlayerBuilt
 {
     type = boolean,
@@ -71,36 +63,33 @@ option ImmersiveBombs.Furniture
     translation = ImmersiveBombs_Furniture,
 }
 
-option ImmersiveBombs.Props
+/*
+    Fences and street props are one switch: both are the map clutter vanilla
+    already lets a car flatten, reached through BrokenFences / BentFences and
+    the HitByCar sprite flag respectively.
+*/
+option ImmersiveBombs.FencesAndProps
 {
     type = boolean,
     default = true,
     page = ImmersiveBombs,
-    translation = ImmersiveBombs_Props,
+    translation = ImmersiveBombs_FencesAndProps,
 }
 
-option ImmersiveBombs.CharWalls
+option ImmersiveBombs.BreakWalls
 {
     type = boolean,
     default = false,
     page = ImmersiveBombs,
-    translation = ImmersiveBombs_CharWalls,
+    translation = ImmersiveBombs_BreakWalls,
 }
 
-option ImmersiveBombs.ScorchMarks
+option ImmersiveBombs.DropScrap
 {
     type = boolean,
     default = true,
     page = ImmersiveBombs,
-    translation = ImmersiveBombs_ScorchMarks,
-}
-
-option ImmersiveBombs.LeaveScrap
-{
-    type = boolean,
-    default = true,
-    page = ImmersiveBombs,
-    translation = ImmersiveBombs_LeaveScrap,
+    translation = ImmersiveBombs_DropScrap,
 }
 
 /* ---- Calibration ---- */
@@ -153,14 +142,4 @@ option ImmersiveBombs.CharThreshold
     max = 5.0,
     page = ImmersiveBombs,
     translation = ImmersiveBombs_CharThreshold,
-}
-
-/* ---- Diagnostics ---- */
-
-option ImmersiveBombs.Debug
-{
-    type = boolean,
-    default = false,
-    page = ImmersiveBombs,
-    translation = ImmersiveBombs_Debug,
 }

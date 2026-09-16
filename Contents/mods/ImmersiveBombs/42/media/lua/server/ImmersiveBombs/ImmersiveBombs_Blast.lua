@@ -42,7 +42,7 @@ end
 --- `force` ignores the energy threshold. Returns true if the object was consumed.
 --- TODO: Try to find a native function to replace this
 local function breakFence(obj, energy, originX, originY, force)
-    if not S.fences then return false end
+    if not S.fencesAndProps then return false end
 
     local broken = BrokenFences.getInstance()
     local bent = BentFences and BentFences.getInstance() or nil
@@ -66,7 +66,7 @@ local function breakFence(obj, energy, originX, originY, force)
     -- destroyFence may replace obj and drop it from the square.
     local square = obj:getSquare()
     broken:destroyFence(obj, dir)
-    if S.leaveScrap and square ~= nil then
+    if S.dropScrap and square ~= nil then
         broken:addItems(obj, square)
     end
     return true
@@ -110,7 +110,7 @@ local function damageFurniture(obj, energy, props, square)
     local health = weight * S.healthPerWeight
     if energy * S.damageScale * materialResistance(obj) < health then return false end
 
-    if S.leaveScrap then dropScrap(props, square) end
+    if S.dropScrap then dropScrap(props, square) end
     square:transmitRemoveItemFromSquare(obj)
     return true
 end
@@ -128,7 +128,7 @@ local function damageBinaryObject(obj, energy, originX, originY)
     if damageFurniture(obj, energy, props, square) then return end
 
     -- Map props - signs, posts, light fixtures - flagged destructible by impact.
-    if not S.props then return end
+    if not S.fencesAndProps then return end
     if not props:has("HitByCar") then return end
 
     local loss = energy * S.binary.genericDamageScale
