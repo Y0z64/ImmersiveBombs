@@ -142,6 +142,108 @@ local function isFloor(obj)
     return props ~= nil and props:has(IsoFlagType.solidfloor)
 end
 
+--- Interior floors have a generic burnt sprite (mirrors IsoGridSquare.Burn());
+--- exterior floors (pavement, grass, gravel...) don't, so they're left for the
+--- grime decal below instead.
+local function scorchFloor(obj)
+    local props = obj:getProperties()
+    if props:has(IsoFlagType.exterior) then return end
+
+    local sprite = obj:getSprite()
+    if sprite and sprite:getName() and sprite:getName():find("_burnt_") then return end
+
+    obj:setSpriteFromName("floors_burnt_01_0")
+    obj:transmitUpdatedSpriteToClients()
+end
+
+--- overlay_grime_floor_01_90/91 are one joint decal split across two
+--- horizontally adjacent tiles (90 = left/west half, 91 = right/east half),
+--- not independent variants - so it is placed once per explosion, at the
+--- exterior floor tile closest to the blast, paired with whichever
+--- horizontal neighbour faces the origin.
+local function floorObjectOn(square)
+    if square == nil then return nil end
+    local objects = square:getObjects()
+    for i = 0, objects:size() - 1 do
+        local obj = objects:get(i)
+        if obj ~= nil and isFloor(obj) then return obj end
+    end
+    return nil
+end
+
+local function grimeableFloor(square)
+    if square == nil or square:haveGrimeFloor() then return nil end
+    local obj = floorObjectOn(square)
+    if obj == nil then return nil end
+    local props = obj:getProperties()
+    if not props:has(IsoFlagType.exterior) then return nil end
+    local sprite = obj:getSprite()
+    if sprite and sprite:getName() and sprite:getName():find("_burnt_") then return nil end
+    return obj
+end
+
+local function placeFloorGrimeDecal(square, originX, originY)
+    local centerObj = grimeableFloor(square)
+    if centerObj == nil then return end
+
+    local cell = square:getCell()
+    local sx, sy, sz = square:getX(), square:getY(), square:getZ()
+    local westObj = grimeableFloor(cell:getGridSquare(sx - 1, sy, sz))
+    local eastObj = grimeableFloor(cell:getGridSquare(sx + 1, sy, sz))
+
+    -- Prefer the side facing the origin so the pair reads as spreading away
+    -- from the blast; fall back to whichever side is actually available.
+    local pairEast
+    if westObj and eastObj then
+        pairEast = originX >= sx
+    elseif eastObj then
+        pairEast = true
+    elseif westObj then
+        pairEast = false
+    else
+        return
+    end
+
+    local westHalf = pairEast and centerObj or westObj
+    local eastHalf = pairEast and eastObj or centerObj
+
+    westHalf:addAttachedAnimSpriteByName("overlay_grime_floor_01_90")
+    westHalf:transmitUpdatedSpriteToClients()
+    eastHalf:addAttachedAnimSpriteByName("overlay_grime_floor_01_91")
+    eastHalf:transmitUpdatedSpriteToClients()
+end
+
+--- Wall grime is directional: pick the square's North or West wall, whichever
+--- faces the blast, using the engine's own wall lookup for that orientation.
+local WALL_GRIME_NORTH = "overlay_grime_wall_01_1"
+local WALL_GRIME_WEST = "overlay_grime_wall_01_0"
+
+local function scorchWall(square, originX, originY)
+    if square:haveGrimeWall() then return end
+
+    local bNorth = math.abs(square:getY() - originY) >= math.abs(square:getX() - originX)
+    local wall = square:getWall(bNorth)
+    if wall == nil then return end
+
+    wall:addAttachedAnimSpriteByName(bNorth and WALL_GRIME_NORTH or WALL_GRIME_WEST)
+    wall:transmitUpdatedSpriteToClients()
+end
+
+--- Scorch/grime reaches further than structural damage, so it gets its own,
+--- lower energy gate instead of riding on the destruction thresholds above.
+local function applyStains(square, energy, originX, originY, snapshot)
+    if energy < S.grimeThreshold then return end
+
+    for i = 1, #snapshot do
+        local obj = snapshot[i]
+        if obj ~= nil and isFloor(obj) then
+            scorchFloor(obj)
+        end
+    end
+
+    scorchWall(square, originX, originY)
+end
+
 local function thumpableAllowed(obj)
     if obj:isDoor() then return S.doors end
     if obj:isWindow() then return S.windows end
@@ -206,11 +308,13 @@ local function applyToSquare(square, energy, originX, originY)
         resolveObject(snapshot[i], energy, originX, originY)
     end
 
+    applyStains(square, energy, originX, originY, snapshot)
+
     -- Burn() chars eligible walls and strips doors, windows and curtains.
     -- It skips sprites the engine considers fire-immune, such as concrete.
     -- TODO: Might be a better idea to use the staining/dirtying mechanic when
     -- destroying walls is toggled off
-    if S.charWalls and energy >= S.charThreshold then
+    if S.BreakWalls and energy >= S.charThreshold then
         square:Burn()
     end
 end
@@ -244,6 +348,9 @@ local function onThrowableExplode(trap, square)
     local ox, oy, oz = square:getX(), square:getY(), square:getZ()
     local r = math.floor(reach)
 
+    -- Nearest exterior floor tile to the blast, for the joint grime decal below.
+    local decalSquare, decalDist
+
     for x = ox - r, ox + r do
         for y = oy - r, oy + r do
             local dx, dy = x - ox, y - oy
@@ -252,11 +359,18 @@ local function onThrowableExplode(trap, square)
                 local falloff = (1 - dist / reach) ^ S.falloffExponent
                 local energy = baseEnergy * falloff
                 if energy >= S.minEnergy then
-                    applyToSquare(cell:getGridSquare(x, y, oz), energy, ox, oy)
+                    local target = cell:getGridSquare(x, y, oz)
+                    applyToSquare(target, energy, ox, oy)
+                    if energy >= S.grimeThreshold and (decalDist == nil or dist < decalDist)
+                        and grimeableFloor(target) ~= nil then
+                        decalSquare, decalDist = target, dist
+                    end
                 end
             end
         end
     end
+
+    placeFloorGrimeDecal(decalSquare, ox, oy)
 end
 
 Events.OnThrowableExplode.Add(onThrowableExplode)

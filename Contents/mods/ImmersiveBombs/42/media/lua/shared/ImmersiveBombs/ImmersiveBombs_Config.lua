@@ -56,6 +56,10 @@ local Config = {
         fenceSmashThreshold = 0.15,
         genericDamageScale  = 150,
     },
+
+    --- Grime/scorch is cosmetic, so it reaches further than structural damage -
+    --- between fenceBreakThreshold and minEnergy.
+    grimeThreshold = 0.003,
 }
 
 --- Defaults for every sandbox option.
@@ -122,6 +126,7 @@ function ImmersiveBombs.getSettings()
         referenceYield = Config.referenceYield,
         yieldExponent  = Config.yieldExponent,
         minEnergy      = Config.minEnergy,
+        grimeThreshold = Config.grimeThreshold,
         fireFallback   = Config.fireFallback,
         furnitureConf  = Config.furniture,
         resistance     = Config.resistance,
