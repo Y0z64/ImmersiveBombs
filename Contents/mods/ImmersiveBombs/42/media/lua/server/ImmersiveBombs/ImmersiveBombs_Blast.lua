@@ -142,9 +142,8 @@ local function isFloor(obj)
     return props ~= nil and props:has(IsoFlagType.solidfloor)
 end
 
---- Interior floors have a generic burnt sprite (mirrors IsoGridSquare.Burn());
---- exterior floors (pavement, grass, gravel...) don't, so they're left for the
---- grime decal below instead.
+--- Interior floors get the generic burnt sprite; exterior floors don't, so
+--- they get the grime decal below instead.
 local function scorchFloor(obj)
     local props = obj:getProperties()
     if props:has(IsoFlagType.exterior) then return end
@@ -156,11 +155,8 @@ local function scorchFloor(obj)
     obj:transmitUpdatedSpriteToClients()
 end
 
---- haveGrimeWall()/haveGrimeFloor() also match vanilla's own ambient room
---- decoration (TileOverlays uses the same attachedAnimSprite + name-matching
---- idiom for pure cosmetic dirt/clutter), so a dirty vanilla room reads as
---- "already grimed" and blocks us forever. Check for our own exact sprite
---- name instead of anything matching "overlay_grime".
+--- haveGrimeWall()/haveGrimeFloor() also match vanilla's ambient room
+--- decoration, so check for our own exact sprite name instead.
 local function hasAttachedSprite(obj, name)
     local list = obj:getAttachedAnimSprite()
     if list == nil then return false end
@@ -172,11 +168,13 @@ local function hasAttachedSprite(obj, name)
     return false
 end
 
---- overlay_grime_floor_01_90/91 are one joint decal split across two
---- horizontally adjacent tiles (90 = left/west half, 91 = right/east half),
---- not independent variants - so it is placed once per explosion, at the
---- exterior floor tile closest to the blast, paired with whichever
---- horizontal neighbour faces the origin.
+local FLOOR_GRIME = {
+    "overlay_grime_floor_01_20",
+    "overlay_grime_floor_01_21",
+    "overlay_grime_floor_01_22",
+    "overlay_grime_floor_01_23",
+}
+
 local function floorObjectOn(square)
     if square == nil then return nil end
     local objects = square:getObjects()
@@ -187,6 +185,7 @@ local function floorObjectOn(square)
     return nil
 end
 
+--- Exterior floor closest to the blast, skipping ones already grimed.
 local function grimeableFloor(square)
     if square == nil then return nil end
     local obj = floorObjectOn(square)
@@ -195,45 +194,20 @@ local function grimeableFloor(square)
     if not props:has(IsoFlagType.exterior) then return nil end
     local sprite = obj:getSprite()
     if sprite and sprite:getName() and sprite:getName():find("_burnt_") then return nil end
-    if hasAttachedSprite(obj, "overlay_grime_floor_01_90") or hasAttachedSprite(obj, "overlay_grime_floor_01_91") then
-        return nil
+    for i = 1, #FLOOR_GRIME do
+        if hasAttachedSprite(obj, FLOOR_GRIME[i]) then return nil end
     end
     return obj
 end
 
-local function placeFloorGrimeDecal(square, originX, originY)
-    local centerObj = grimeableFloor(square)
-    if centerObj == nil then return end
-
-    local cell = square:getCell()
-    local sx, sy, sz = square:getX(), square:getY(), square:getZ()
-    local westObj = grimeableFloor(cell:getGridSquare(sx - 1, sy, sz))
-    local eastObj = grimeableFloor(cell:getGridSquare(sx + 1, sy, sz))
-
-    -- Prefer the side facing the origin so the pair reads as spreading away
-    -- from the blast; fall back to whichever side is actually available.
-    local pairEast
-    if westObj and eastObj then
-        pairEast = originX >= sx
-    elseif eastObj then
-        pairEast = true
-    elseif westObj then
-        pairEast = false
-    else
-        return
-    end
-
-    local westHalf = pairEast and centerObj or westObj
-    local eastHalf = pairEast and eastObj or centerObj
-
-    westHalf:addAttachedAnimSpriteByName("overlay_grime_floor_01_90")
-    westHalf:transmitUpdatedSpriteToClients()
-    eastHalf:addAttachedAnimSpriteByName("overlay_grime_floor_01_91")
-    eastHalf:transmitUpdatedSpriteToClients()
+local function placeFloorGrimeDecal(obj)
+    if obj == nil then return end
+    local name = FLOOR_GRIME[ZombRand(#FLOOR_GRIME) + 1]
+    obj:addAttachedAnimSpriteByName(name)
+    obj:transmitUpdatedSpriteToClients()
 end
 
---- Wall grime is directional: pick the square's North or West wall, whichever
---- faces the blast, using the engine's own wall lookup for that orientation.
+--- Wall grime is directional: whichever wall (North or West) faces the blast.
 local WALL_GRIME_NORTH = "overlay_grime_wall_01_1"
 local WALL_GRIME_WEST = "overlay_grime_wall_01_0"
 
@@ -249,9 +223,8 @@ local function scorchWall(square, originX, originY)
     wall:transmitUpdatedSpriteToClients()
 end
 
---- Scorch/grime is cosmetic but must stay close to the blast regardless of
---- how powerful the bomb is - gated on tile distance, not the energy/falloff
---- curve destruction uses, so a bigger charge doesn't scorch a whole room.
+--- Scorch/grime stays close to the blast regardless of power - gated on
+--- tile distance, not the destruction energy curve.
 local function applyStains(square, dist, scorchRadius, originX, originY, snapshot)
     if dist > scorchRadius then return end
 
@@ -313,11 +286,7 @@ end
 
 local function applyToSquare(square, energy, originX, originY, dist, scorchRadius)
     if square == nil then return end
-    -- Respect No destruction zones
-    if NonPvpZone.getNonPvpZone(square:getX(), square:getY()) ~= nil then
-        print("ImmersiveBombs: square in NonPvpZone, skipping")
-        return
-    end
+    if NonPvpZone.getNonPvpZone(square:getX(), square:getY()) ~= nil then return end
 
     -- Snapshot: destroying an object mutates the square's object list.
     local objects = square:getObjects()
@@ -342,47 +311,36 @@ local function applyToSquare(square, energy, originX, originY, dist, scorchRadiu
 end
 
 local function onThrowableExplode(trap, square)
-    print("ImmersiveBombs: OnThrowableExplode fired")
     S = ImmersiveBombs.getSettings()
-    if not S.enabled then print("ImmersiveBombs: disabled by sandbox option") return end
-    if trap == nil or square == nil then print("ImmersiveBombs: trap or square nil") return end
+    if not S.enabled then return end
+    if trap == nil or square == nil then return end
 
     local power = trap:getExplosionPower()
     local range = trap:getExplosionRange()
     local baseEnergy
-    print("ImmersiveBombs: power=" .. tostring(power) .. " range=" .. tostring(range)
-        .. " fireStartingEnergy=" .. tostring(trap:getFireStartingEnergy()))
 
     if power > 0 and range > 0 then
         -- Yield is power * range: a wider charge is a bigger charge.
         baseEnergy = (power * range / S.referenceYield) ^ S.yieldExponent
     else
-        if trap:getFireStartingEnergy() <= 0 then print("ImmersiveBombs: no power/range and no fire energy, bailing") return end
+        if trap:getFireStartingEnergy() <= 0 then return end
         baseEnergy = S.fireFallback.energy
         range = S.fireFallback.range
     end
 
     baseEnergy = baseEnergy * S.powerScale
 
-    -- Blast reach stretches the shockwave without touching the yield above,
-    -- so widening the radius does not also make the charge stronger.
+    -- Reach stretches the shockwave without changing the yield above.
     local reach = range * S.reachScale
-    print("ImmersiveBombs: baseEnergy=" .. tostring(baseEnergy) .. " reach=" .. tostring(reach)
-        .. " minEnergy=" .. tostring(S.minEnergy))
-    if reach <= 0 then print("ImmersiveBombs: reach <= 0, bailing") return end
+    if reach <= 0 then return end
 
     local cell = square:getCell()
     local ox, oy, oz = square:getX(), square:getY(), square:getZ()
     local r = math.floor(reach)
-
-    -- Scorch/grime stays close to the origin even for a very powerful charge:
-    -- a small base radius plus a small fraction of reach, capped.
     local scorchRadius = math.min(S.scorchRadiusMax, S.scorchRadiusBase + reach * S.scorchRadiusScale)
-    print("ImmersiveBombs: scorchRadius=" .. tostring(scorchRadius))
 
-    -- Nearest exterior floor tile to the blast, for the joint grime decal below.
-    local decalSquare, decalDist
-    local touched = 0
+    -- Nearest grimeable exterior floor to the blast gets the decal.
+    local decalObj, decalDist
 
     for x = ox - r, ox + r do
         for y = oy - r, oy + r do
@@ -394,18 +352,16 @@ local function onThrowableExplode(trap, square)
                 if energy >= S.minEnergy then
                     local target = cell:getGridSquare(x, y, oz)
                     applyToSquare(target, energy, ox, oy, dist, scorchRadius)
-                    touched = touched + 1
-                    if dist <= scorchRadius and (decalDist == nil or dist < decalDist)
-                        and grimeableFloor(target) ~= nil then
-                        decalSquare, decalDist = target, dist
+                    if dist <= scorchRadius and (decalDist == nil or dist < decalDist) then
+                        local obj = grimeableFloor(target)
+                        if obj ~= nil then decalObj, decalDist = obj, dist end
                     end
                 end
             end
         end
     end
 
-    print("ImmersiveBombs: touched " .. touched .. " squares, decalSquare=" .. tostring(decalSquare))
-    placeFloorGrimeDecal(decalSquare, ox, oy)
+    placeFloorGrimeDecal(decalObj)
 end
 
 Events.OnThrowableExplode.Add(onThrowableExplode)
