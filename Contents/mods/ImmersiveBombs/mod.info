@@ -1,0 +1,6 @@
+id=ImmersiveBombs
+name=Immersive Bombs
+description=Explosions damage the world around them - doors, windows, fences and furniture.
+poster=poster.png
+tags=Build 41
+versionMin=41.0
