@@ -11,13 +11,13 @@
     "Sandbox_ImmersiveBombs_Windows_tooltip": "Blasts shatter windows. Range is larger than breaking furniture or doors",
 
     "Sandbox_ImmersiveBombs_PlayerBuilt": "Break player-built structures",
-    "Sandbox_ImmersiveBombs_PlayerBuilt_tooltip": "Blasts damage carpentry and metalwork raised by players - walls, gates, barricades. \\nTurn this off on a server where charges could be used to breach bases.",
+    "Sandbox_ImmersiveBombs_PlayerBuilt_tooltip": "Blasts damage againt playe structures (walls, gates, barricades) \\nTurn this off on a server where charges could be used to breach bases.",
 
     "Sandbox_ImmersiveBombs_Furniture": "Destroy furniture",
     "Sandbox_ImmersiveBombs_Furniture_tooltip": "Blasts blow apart furniture that could have been dismantled or carried away, drops scrap.",
 
-    "Sandbox_ImmersiveBombs_FencesAndProps": "Break fences and street props",
-    "Sandbox_ImmersiveBombs_FencesAndProps_tooltip": "Blasts bend and flatten fences, and wreck the roadside clutter cars can already flatten - signs, posts, meters, light fixtures. \\nWeak fences are blown away from the charge; a close hit smashes them outright.",
+    "Sandbox_ImmersiveBombs_FencesAndProps": "Break fences and props",
+    "Sandbox_ImmersiveBombs_FencesAndProps_tooltip": "Blasts break breakable items (fencees, signs, posts, meters, lights) \\nA close hit outright destroy props.",
 
     "Sandbox_ImmersiveBombs_BreakWalls": "Break walls",
     "Sandbox_ImmersiveBombs_BreakWalls_tooltip": "A big enough blast turns eligible walls into burned versions, which can be climbed through. \\nRequires at least a pipe bomb.",

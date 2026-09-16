@@ -49,8 +49,6 @@ local Config = {
 
     --- Objects with no health, damaged on IsoObject.damage (0-100).
     --- Thresholds are in energy, so 0-1.
-    --- TODO: This should tune to all HitByCar objects and not only fences
-    --- (lamposts, signs, etc)
     binary = {
         fenceBreakThreshold = 0.02,
         fenceSmashThreshold = 0.15,
@@ -100,8 +98,6 @@ end
 --- The effective settings for one explosion: the curve above, with the player's
 --- sandbox choices folded in. Built once per blast, so a mid-game change to the
 --- options updates.
---- TODO: Might not be optimal, measure and remove if not needed, currently only
---- useful for debug
 function ImmersiveBombs.getSettings()
     return {
         enabled     = sandboxValue("Enabled"),

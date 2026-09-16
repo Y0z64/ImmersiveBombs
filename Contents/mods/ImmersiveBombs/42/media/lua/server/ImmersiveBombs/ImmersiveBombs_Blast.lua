@@ -301,10 +301,6 @@ local function applyToSquare(square, energy, originX, originY, dist, scorchRadiu
 
     applyStains(square, dist, scorchRadius, originX, originY, snapshot)
 
-    -- Burn() chars eligible walls and strips doors, windows and curtains.
-    -- It skips sprites the engine considers fire-immune, such as concrete.
-    -- TODO: Might be a better idea to use the staining/dirtying mechanic when
-    -- destroying walls is toggled off
     if S.BreakWalls and energy >= S.charThreshold then
         square:Burn()
     end
