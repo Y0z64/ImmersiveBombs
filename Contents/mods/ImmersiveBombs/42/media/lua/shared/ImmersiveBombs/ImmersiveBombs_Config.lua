@@ -57,9 +57,11 @@ local Config = {
         genericDamageScale  = 150,
     },
 
-    --- Grime/scorch is cosmetic, so it reaches further than structural damage -
-    --- between fenceBreakThreshold and minEnergy.
-    grimeThreshold = 0.003,
+    --- Scorch/grime radius in tiles: base + reach * scale, capped at max, so
+    --- it stays close to the blast regardless of how powerful the charge is.
+    scorchRadiusBase = 1,
+    scorchRadiusScale = 0.1,
+    scorchRadiusMax = 3,
 }
 
 --- Defaults for every sandbox option.
@@ -72,9 +74,9 @@ local Defaults = {
     Doors              = true,
     Windows            = true,
     PlayerBuilt        = true,
-    Furniture          = false,
+    Furniture          = true,
     FencesAndProps     = true,
-    BreakWalls         = false,
+    BreakWalls         = true,
     DropScrap          = true,
     BlastPower         = 100,
     BlastRadius        = 100,
@@ -126,7 +128,9 @@ function ImmersiveBombs.getSettings()
         referenceYield = Config.referenceYield,
         yieldExponent  = Config.yieldExponent,
         minEnergy      = Config.minEnergy,
-        grimeThreshold = Config.grimeThreshold,
+        scorchRadiusBase  = Config.scorchRadiusBase,
+        scorchRadiusScale = Config.scorchRadiusScale,
+        scorchRadiusMax   = Config.scorchRadiusMax,
         fireFallback   = Config.fireFallback,
         furnitureConf  = Config.furniture,
         resistance     = Config.resistance,

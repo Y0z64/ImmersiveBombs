@@ -156,6 +156,22 @@ local function scorchFloor(obj)
     obj:transmitUpdatedSpriteToClients()
 end
 
+--- haveGrimeWall()/haveGrimeFloor() also match vanilla's own ambient room
+--- decoration (TileOverlays uses the same attachedAnimSprite + name-matching
+--- idiom for pure cosmetic dirt/clutter), so a dirty vanilla room reads as
+--- "already grimed" and blocks us forever. Check for our own exact sprite
+--- name instead of anything matching "overlay_grime".
+local function hasAttachedSprite(obj, name)
+    local list = obj:getAttachedAnimSprite()
+    if list == nil then return false end
+    for i = 0, list:size() - 1 do
+        local inst = list:get(i)
+        local parent = inst and inst:getParentSprite()
+        if parent and parent:getName() == name then return true end
+    end
+    return false
+end
+
 --- overlay_grime_floor_01_90/91 are one joint decal split across two
 --- horizontally adjacent tiles (90 = left/west half, 91 = right/east half),
 --- not independent variants - so it is placed once per explosion, at the
@@ -172,13 +188,16 @@ local function floorObjectOn(square)
 end
 
 local function grimeableFloor(square)
-    if square == nil or square:haveGrimeFloor() then return nil end
+    if square == nil then return nil end
     local obj = floorObjectOn(square)
     if obj == nil then return nil end
     local props = obj:getProperties()
     if not props:has(IsoFlagType.exterior) then return nil end
     local sprite = obj:getSprite()
     if sprite and sprite:getName() and sprite:getName():find("_burnt_") then return nil end
+    if hasAttachedSprite(obj, "overlay_grime_floor_01_90") or hasAttachedSprite(obj, "overlay_grime_floor_01_91") then
+        return nil
+    end
     return obj
 end
 
@@ -219,20 +238,22 @@ local WALL_GRIME_NORTH = "overlay_grime_wall_01_1"
 local WALL_GRIME_WEST = "overlay_grime_wall_01_0"
 
 local function scorchWall(square, originX, originY)
-    if square:haveGrimeWall() then return end
-
     local bNorth = math.abs(square:getY() - originY) >= math.abs(square:getX() - originX)
     local wall = square:getWall(bNorth)
     if wall == nil then return end
 
-    wall:addAttachedAnimSpriteByName(bNorth and WALL_GRIME_NORTH or WALL_GRIME_WEST)
+    local grimeName = bNorth and WALL_GRIME_NORTH or WALL_GRIME_WEST
+    if hasAttachedSprite(wall, grimeName) then return end
+
+    wall:addAttachedAnimSpriteByName(grimeName)
     wall:transmitUpdatedSpriteToClients()
 end
 
---- Scorch/grime reaches further than structural damage, so it gets its own,
---- lower energy gate instead of riding on the destruction thresholds above.
-local function applyStains(square, energy, originX, originY, snapshot)
-    if energy < S.grimeThreshold then return end
+--- Scorch/grime is cosmetic but must stay close to the blast regardless of
+--- how powerful the bomb is - gated on tile distance, not the energy/falloff
+--- curve destruction uses, so a bigger charge doesn't scorch a whole room.
+local function applyStains(square, dist, scorchRadius, originX, originY, snapshot)
+    if dist > scorchRadius then return end
 
     for i = 1, #snapshot do
         local obj = snapshot[i]
@@ -290,10 +311,11 @@ local function resolveObject(obj, energy, originX, originY)
     damageBinaryObject(obj, energy, originX, originY)
 end
 
-local function applyToSquare(square, energy, originX, originY)
+local function applyToSquare(square, energy, originX, originY, dist, scorchRadius)
     if square == nil then return end
     -- Respect No destruction zones
     if NonPvpZone.getNonPvpZone(square:getX(), square:getY()) ~= nil then
+        print("ImmersiveBombs: square in NonPvpZone, skipping")
         return
     end
 
@@ -308,7 +330,7 @@ local function applyToSquare(square, energy, originX, originY)
         resolveObject(snapshot[i], energy, originX, originY)
     end
 
-    applyStains(square, energy, originX, originY, snapshot)
+    applyStains(square, dist, scorchRadius, originX, originY, snapshot)
 
     -- Burn() chars eligible walls and strips doors, windows and curtains.
     -- It skips sprites the engine considers fire-immune, such as concrete.
@@ -320,19 +342,22 @@ local function applyToSquare(square, energy, originX, originY)
 end
 
 local function onThrowableExplode(trap, square)
+    print("ImmersiveBombs: OnThrowableExplode fired")
     S = ImmersiveBombs.getSettings()
-    if not S.enabled then return end
-    if trap == nil or square == nil then return end
+    if not S.enabled then print("ImmersiveBombs: disabled by sandbox option") return end
+    if trap == nil or square == nil then print("ImmersiveBombs: trap or square nil") return end
 
     local power = trap:getExplosionPower()
     local range = trap:getExplosionRange()
     local baseEnergy
+    print("ImmersiveBombs: power=" .. tostring(power) .. " range=" .. tostring(range)
+        .. " fireStartingEnergy=" .. tostring(trap:getFireStartingEnergy()))
 
     if power > 0 and range > 0 then
         -- Yield is power * range: a wider charge is a bigger charge.
         baseEnergy = (power * range / S.referenceYield) ^ S.yieldExponent
     else
-        if trap:getFireStartingEnergy() <= 0 then return end
+        if trap:getFireStartingEnergy() <= 0 then print("ImmersiveBombs: no power/range and no fire energy, bailing") return end
         baseEnergy = S.fireFallback.energy
         range = S.fireFallback.range
     end
@@ -342,14 +367,22 @@ local function onThrowableExplode(trap, square)
     -- Blast reach stretches the shockwave without touching the yield above,
     -- so widening the radius does not also make the charge stronger.
     local reach = range * S.reachScale
-    if reach <= 0 then return end
+    print("ImmersiveBombs: baseEnergy=" .. tostring(baseEnergy) .. " reach=" .. tostring(reach)
+        .. " minEnergy=" .. tostring(S.minEnergy))
+    if reach <= 0 then print("ImmersiveBombs: reach <= 0, bailing") return end
 
     local cell = square:getCell()
     local ox, oy, oz = square:getX(), square:getY(), square:getZ()
     local r = math.floor(reach)
 
+    -- Scorch/grime stays close to the origin even for a very powerful charge:
+    -- a small base radius plus a small fraction of reach, capped.
+    local scorchRadius = math.min(S.scorchRadiusMax, S.scorchRadiusBase + reach * S.scorchRadiusScale)
+    print("ImmersiveBombs: scorchRadius=" .. tostring(scorchRadius))
+
     -- Nearest exterior floor tile to the blast, for the joint grime decal below.
     local decalSquare, decalDist
+    local touched = 0
 
     for x = ox - r, ox + r do
         for y = oy - r, oy + r do
@@ -360,8 +393,9 @@ local function onThrowableExplode(trap, square)
                 local energy = baseEnergy * falloff
                 if energy >= S.minEnergy then
                     local target = cell:getGridSquare(x, y, oz)
-                    applyToSquare(target, energy, ox, oy)
-                    if energy >= S.grimeThreshold and (decalDist == nil or dist < decalDist)
+                    applyToSquare(target, energy, ox, oy, dist, scorchRadius)
+                    touched = touched + 1
+                    if dist <= scorchRadius and (decalDist == nil or dist < decalDist)
                         and grimeableFloor(target) ~= nil then
                         decalSquare, decalDist = target, dist
                     end
@@ -370,6 +404,7 @@ local function onThrowableExplode(trap, square)
         end
     end
 
+    print("ImmersiveBombs: touched " .. touched .. " squares, decalSquare=" .. tostring(decalSquare))
     placeFloorGrimeDecal(decalSquare, ox, oy)
 end
 
