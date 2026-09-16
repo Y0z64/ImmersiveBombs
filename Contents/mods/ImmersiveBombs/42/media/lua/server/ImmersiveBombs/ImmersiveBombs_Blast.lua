@@ -8,11 +8,6 @@ ImmersiveBombs = ImmersiveBombs or {}
 
 local S = nil
 
--- TODO: Modding guide specified we should never print. Look for specified page
-local function log(msg)
-    if S.debug then print("[ImmersiveBombs] " .. tostring(msg)) end
-end
-
 local function materialResistance(obj)
     local resist = S.resistance
     local sprite = obj:getSprite()
@@ -88,9 +83,11 @@ local SCRAP = {
     Screws      = { item = "Base.Screws",       oneIn = 5 },
 }
 
+local MATERIAL_KEYS = { "Material", "Material2", "Material3" }
+
 local function dropScrap(props, square)
-    for _, key in ipairs({ "Material", "Material2", "Material3" }) do
-        local material = props:get(key)
+    for i = 1, #MATERIAL_KEYS do
+        local material = props:get(MATERIAL_KEYS[i])
         local scrap = material and SCRAP[material]
         if scrap and ZombRand(scrap.oneIn) == 0 then
             square:AddWorldInventoryItem(scrap.item, ZombRandFloat(0.0, 0.5), ZombRandFloat(0.0, 0.5), 0.0)
@@ -155,11 +152,11 @@ local function resolveObject(obj, energy, originX, originY)
     if obj == nil then return end
     if isFloor(obj) then return end
 
-    local damage = energy * S.damageScale * materialResistance(obj)
-
     -- Smashes itself and trips the alarm at zero health.
     if instanceof(obj, "IsoWindow") then
-        if S.windows then obj:Damage(damage) end
+        if S.windows then
+            obj:Damage(energy * S.damageScale * materialResistance(obj))
+        end
         return
     end
 
@@ -167,6 +164,7 @@ local function resolveObject(obj, energy, originX, originY)
     if instanceof(obj, "IsoDoor") then
         if not S.doors then return end
         if obj:getHealth() <= 0 then return end
+        local damage = energy * S.damageScale * materialResistance(obj)
         obj:setHealth(math.max(0, math.floor(obj:getHealth() - damage)))
         if obj:getHealth() <= 0 then
             obj:destroy()
@@ -177,7 +175,7 @@ local function resolveObject(obj, energy, originX, originY)
     if instanceof(obj, "IsoThumpable") then
         if not thumpableAllowed(obj) then return end
         if obj:getHealth() <= 0 then return end
-        obj:Damage(damage)
+        obj:Damage(energy * S.damageScale * materialResistance(obj))
         -- Damage does not destroy on its own.
         if obj:getHealth() <= 0 then
             if not breakFence(obj, energy, originX, originY, true) then
@@ -246,13 +244,10 @@ local function onThrowableExplode(trap, square)
     local ox, oy, oz = square:getX(), square:getY(), square:getZ()
     local r = math.floor(reach)
 
-    log(string.format("blast at %d,%d,%d power=%d range=%d reach=%.2f energy=%.4f",
-        ox, oy, oz, power, range, reach, baseEnergy))
-
     for x = ox - r, ox + r do
         for y = oy - r, oy + r do
             local dx, dy = x - ox, y - oy
-            local dist = math.sqrt(dx * dx + dy * dy)
+            local dist = (dx * dx + dy * dy) ^ 0.5
             if dist <= reach then
                 local falloff = (1 - dist / reach) ^ S.falloffExponent
                 local energy = baseEnergy * falloff
