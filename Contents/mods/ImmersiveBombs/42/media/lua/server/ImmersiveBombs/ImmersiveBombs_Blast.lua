@@ -142,12 +142,10 @@ local function isFloor(obj)
     return props ~= nil and props:has(IsoFlagType.solidfloor)
 end
 
---- Interior floors get the generic burnt sprite; exterior floors don't, so
---- they get the grime decal below instead.
+--- Always attempted regardless of interior/exterior - a floor that has no
+--- burnt sprite to fall back on (or is already burnt) just keeps whatever
+--- grime decal applyStains() adds instead.
 local function scorchFloor(obj)
-    local props = obj:getProperties()
-    if props:has(IsoFlagType.exterior) then return end
-
     local sprite = obj:getSprite()
     if sprite and sprite:getName() and sprite:getName():find("_burnt_") then return end
 
@@ -185,15 +183,13 @@ local function floorObjectOn(square)
     return nil
 end
 
---- Exterior floor closest to the blast, skipping ones already grimed.
+--- Closest floor to the blast that isn't already grimed. Not gated on
+--- burnt/unburnt - it lands whether or not scorchFloor() could also char it,
+--- so an unburnable floor (e.g. grass) still shows something.
 local function grimeableFloor(square)
     if square == nil then return nil end
     local obj = floorObjectOn(square)
     if obj == nil then return nil end
-    local props = obj:getProperties()
-    if not props:has(IsoFlagType.exterior) then return nil end
-    local sprite = obj:getSprite()
-    if sprite and sprite:getName() and sprite:getName():find("_burnt_") then return nil end
     for i = 1, #FLOOR_GRIME do
         if hasAttachedSprite(obj, FLOOR_GRIME[i]) then return nil end
     end
