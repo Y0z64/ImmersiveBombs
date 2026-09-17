@@ -1,23 +1,27 @@
 # Immersive Bombs
 
-A Project Zomboid mod. Explosions from thrown bombs and placed traps damage the
-environment: they break doors, windows, fences, street props and furniture, char
-nearby walls, and (soon) leave scorch stains. Vanilla explosions only ever hit
-characters — this mod hooks the engine's own trap/explosion event, so it works with
-any bomb mod that uses vanilla trap logic, no vanilla files touched.
+## Breakdown secured doors and walls
+Explosions now damage the world around them:
+Damage or break doors, secure doors and garages.
+Break windows and furniture around explosions
+Scorch floors, walls and leave marks on the world
 
-- Doors, secure doors and garage doors lose durability and break at 0 — weaken one
-  with a bomb, then finish it off by hand.
-- Furniture toughness scales with weight; destroying a container destroys its contents.
-- Windows break at a longer range than it takes to damage most other things.
-- Fences and street props (signs, lamps, etc.) break or are destroyed depending on
-  blast intensity and proximity.
-- Eligible walls char instead of breaking.
+## How it works
+The explosion intensity is calculated with both the explosion power and the range of the bomb with a steep distance falloff.
 
-Build 42 only (built against 42.20). Doesn't modify any vanilla files, is safe to
-add to or remove from an existing save, and should work in multiplayer (the server
-needs the mod installed; not yet tested in MP). All settings are configured from
-**Sandbox Options → Immersive Bombs**.
+### Different objects are damaged in different ways:
+- Doors, Garege doors and Secure doors: Have their durability reduced and break at 0. Meaning that you can weaken a door with a bomb and then finish it off with melee atacks.
+
+- Furniture: Furniture toughness is calculated by the object's weight. Very heavy objects will be difficult to destroy even with a powerful bomb while small objects like chairs will blow up easy. Destroying a container also destroys the contents.
+
+- Windows: Windows break at a very far distance of the explosion center and don't require a very powerful bomb to break.
+
+- Fences and other props: Explosions will either break or completely destroy fences and other damageable objects (signs, lamps, etc.) depending on the explosion intensity and proximity.
+
+### Default bomb behaviour:
+- Aerosol bombs damage a secure door for around 60% of its health but cannot destroy walls or most furniture.
+
+- Pipe bombs breakdown secure doors and destroy walls at point blank.
 
 Steam Workshop: [Immersive Bombs](https://steamcommunity.com/sharedfiles/filedetails/?id=3802953329)
 
@@ -52,22 +56,9 @@ mklink /D "%USERPROFILE%\Zomboid\mods\ImmersiveBombs" "<path-to-repo>\Contents\m
 ```
 
 Then enable the mod in-game as usual. Game logs land in `~/Zomboid/console.txt`
-(Linux) — check there when something misbehaves. Run the game with `-debug` at
+(Linux), check there when something misbehaves. Run the game with `-debug` at
 least once after touching `sandbox-options.txt` or `Sandbox.json`, since malformed
 sandbox files fail loudly under strict JSON parsing but silently otherwise.
-
-## Building from source / packaging a release
-
-There's nothing to compile. To produce a distributable copy:
-
-```bash
-cp -r Contents/mods/ImmersiveBombs /path/to/output/ImmersiveBombs
-```
-
-The `images/` folder (raw PSD/source assets) and this repo's dev files
-(`CLAUDE.md`, `.vscode`, `.idea`) are not part of the mod and should stay out of
-anything you package or upload — only `Contents/mods/ImmersiveBombs` is the mod
-itself.
 
 ## Issues
 
