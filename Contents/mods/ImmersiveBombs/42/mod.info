@@ -4,5 +4,6 @@ author=Y0z64
 modversion = 0.0.1,
 description=Explosions damage the world around them (walls, doors, windows, and furniture).
 poster=poster.png
-tags=Build 42
+icon=icon.png,
 versionMin=42.0
+category=features,
